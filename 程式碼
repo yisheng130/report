@@ -5,6 +5,7 @@ library(readxl)
 library(dplyr)
 library(readr)
 library(ggplot2)
+library(tidyr)
 
 #---DATA_PREPARE-------
 #Japan
@@ -45,13 +46,21 @@ Data <- read.csv("DATA.csv")
 pct_vars <- c("食_pct", "衣_pct", "住_pct", "行_pct", "育樂_pct", "其他_pct")
 Data_pct <- Data[, pct_vars]
 
+#---BOXPLOT----
+df_long <- Data %>%
+  select(地區, 國家, ends_with("_pct")) %>%
+  pivot_longer(cols = ends_with("_pct"), names_to = "Category", values_to = "Percentage")
+
+ggplot(df_long, aes(x = Category, y = Percentage, fill = 國家)) +
+  geom_boxplot() +
+  labs(title = "台日消費結構分佈比較 (2023)", 
+       subtitle = "台灣住與其他佔比高，日本食與行佔比高", x="類別", y="佔比%") +
+  theme_minimal() + scale_fill_brewer(palette = "Set1")
+
 #---MANOVA----
 manova_res <- manova(as.matrix(Data_pct) ~ 國家, data = Data)
 summary(manova_res, test = "Wilks") 
 
-# 查看個別變數的 ANOVA 結果
-cat("\n=== 個別變數 ANOVA 結果 ===\n")
-summary.aov(manova_res)
 
 #---PCA----
 pca_res <- prcomp(Data[, pct_vars], scale. = TRUE)
@@ -77,37 +86,8 @@ p3 <- ggplot(ld_df, aes(x = LD1, fill = 國家)) +
   geom_density(alpha = 0.6) +
   labs(title = "LDA 判別函數分佈", x = "LD1 Score") +
   theme_minimal()
-print(p3)
+p3
 
 # 混淆矩陣 (預測準確率)
 lda_pred <- predict(lda_model)$class
 table(Actual = Data$國家, Predicted = lda_pred)
-
-#---FA----
-fa_result <- factanal(Data_pct, factors = 2, rotation = "varimax")
-
-print(fa_result)
-
-# 繪製因素負荷量圖
-loadings_df <- data.frame(unclass(fa_result$loadings))
-loadings_df$Variable <- rownames(loadings_df)
-
-loadings_df
-
-ggplot(loadings_df, aes(x = Factor1, y = Factor2, label = Variable)) +
-  geom_point(color = "blue", size = 3) +
-  geom_text(vjust = -1, size = 5) +
-  geom_vline(xintercept = 0, linetype="dashed") +
-  geom_hline(yintercept = 0, linetype="dashed") +
-  labs(title = "因素分析負荷量圖", x = "Factor 1", y = "Factor 2") +
-  theme_minimal()
-
-#---離群----
-m_dist <- mahalanobis(Data_pct, colMeans(Data_pct), cov(Data_pct))
-qqplot(qchisq(ppoints(nrow(Data_pct)), df = ncol(Data_pct)), m_dist,
-       main = "Q-Q Plot", xlab = "Theoretical Quantiles", ylab = "Mahalanobis Distance")
-abline(0, 1, col = "red")
-
-Data$MD <- m_dist
-#消費模式最獨特的 5 個城市
-print(Data %>% arrange(desc(MD)) %>% dplyr::select(地區, 國家, MD) %>% head(5))
