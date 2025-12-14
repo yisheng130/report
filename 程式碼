@@ -1,0 +1,38 @@
+setwd("C:/Users/USER/Desktop/多變量分析")
+
+#---LIBRARY-------
+library(readxl)
+library(dplyr)
+library(readr)
+
+#---DATA_PREPARE-------
+#Japan
+Japan <- data.frame(read_excel("a101.xlsx",sheet = "二人"))
+Japan_clean <- Japan　%>%　select(14,30:81) %>% slice(8,25,66,71,76,86,104,109,116,120,129)
+
+rownames(Japan_clean) <- c("地區", "食料", "住居", "光熱・水道", "家具・家事用品", "被服及び履物", "保健医療", "交通・通信", "教育", "教養娯楽","その他の消費支出")
+
+Japan_clean[1,] <- c("全国", "札幌市", "青森市", "盛岡市", "仙台市", "秋田市","山形市", "福島市", "水戸市", "宇都宮市", "前橋市", "さいたま市","千葉市", "東京都区部", "横浜市", "新潟市", "富山市", "金沢市","福井市", "甲府市", "長野市", "岐阜市", "静岡市", "名古屋市","津市", "大津市", "京都市", "大阪市", "神戸市", "奈良市","和歌山市", "鳥取市", "松江市", "岡山市", "広島市", "山口市","徳島市", "高松市", "松山市", "高知市", "福岡市", "佐賀市","長崎市", "熊本市", "大分市", "宮崎市", "鹿児島市", "那覇市","川崎市", "相模原市", "浜松市", "堺市", "北九州市")
+
+Japan_clean <- as.data.frame(t(Japan_clean)) %>% 
+  mutate(across(2:11, ~ parse_number(.))) %>% 
+  mutate(食 = `食料`, 衣 = `被服及び履物`,住 = `住居` + `光熱・水道`,行=`交通・通信`,育樂=`教育`+`教養娯楽`,
+         其他=`家具・家事用品`+`保健医療`+`その他の消費支出`) %>% 
+  select("地區","食","衣","住","行","育樂","其他")
+
+Japan_data <- Japan_clean  %>% 
+  mutate(平均消費 = .$`食` + .$`衣` + .$`住` + .$`行` + .$`育樂` + .$`其他`) %>% 
+  mutate(across(2:8, ~ . * 0.22)) %>% mutate(國家 = "Japan")
+
+#Taiwan
+Taiwan <- read.csv("7-1+平均每戶全年經常性收入及支出.csv")
+Taiwan_data <- Taiwan %>% select(-c(1,3,4,5,7,9,11,13,15,17,19,20,21)) %>% slice(-c(1,3,11,17,24,27,28,29))
+colnames(Taiwan_data) <- c("地區","平均消費","食","衣","住","行","育樂","其他")
+Taiwan_data <- Taiwan_data %>% mutate(across(2:8, ~ parse_number(.))) %>% mutate(國家 = "Taiwan")
+  
+#---DATA-----
+Data <- rbind(Japan_data,Taiwan_data) %>%
+  mutate(食_pct=sprintf('%.1f', 100*食/平均消費),衣_pct=sprintf('%.1f', 100*衣/平均消費),
+         住_pct=sprintf('%.1f', 100*住/平均消費),行_pct=sprintf('%.1f', 100*行/平均消費),
+         育樂_pct=sprintf('%.1f', 100*育樂/平均消費),其他_pct=sprintf('%.1f', 100*其他/平均消費))  %>% 
+  select("地區","食","食_pct","衣","衣_pct","住","住_pct","行","行_pct","育樂","育樂_pct","其他","其他_pct","平均消費")
