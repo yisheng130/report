@@ -86,3 +86,7 @@ ggplot(ld_df, aes(x = LD1, fill = 國家)) +
   geom_density(alpha = 0.6) +
   labs(title = "LDA 判別函數分佈", x = "LD1 Score") +
   theme_minimal()
+
+# 混淆矩陣 (預測準確率)
+lda_pred <- predict(lda_model)$class
+table(Actual = Data$國家, Predicted = lda_pred)
