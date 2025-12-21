@@ -42,7 +42,7 @@ DATA <- rbind(Japan_data,Taiwan_data) %>%
 write_excel_csv(DATA,"DATA.csv")
 
 #---DATA-----
-Data <- read.csv("DATA.csv")
+Data <- read.csv("DATA.csv") %>% slice(-c(1,54))
 pct_vars <- c("食_pct", "衣_pct", "住_pct", "行_pct", "育樂_pct", "其他_pct")
 Data_pct <- Data[, pct_vars]
 
@@ -61,11 +61,20 @@ ggplot(df_long, aes(x = Category, y = Percentage, fill = 國家)) +
 manova_res <- manova(as.matrix(Data_pct) ~ 國家, data = Data)
 summary(manova_res, test = "Wilks") 
 
-
 #---PCA----
 pca_res <- prcomp(Data[, pct_vars], scale. = TRUE)
 summary(pca_res)
 pca_res$rotation
+
+#PC1
+loading_PC1 <- sort(pca_res$rotation[, 1], decreasing = TRUE)
+print(head(loading_PC1, 5)) # 正相關最強的 5 個 (PC1 分數越高，越偏向這些風格)
+print(tail(loading_PC1, 5)) # 負相關最強的 5 個 (PC1 分數越低，越偏向這些風格)
+
+#PC2
+loading_PC2 <- sort(pca_res$rotation[, 2], decreasing = TRUE)
+print(head(loading_PC2, 5)) 
+print(tail(loading_PC2, 5))
 
 biplot(pca_res, scale = 0, cex = 0.6, xlabs = rep("●", nrow(Data)), 
        main = "PCA Biplot (主成分分析雙標圖)")
